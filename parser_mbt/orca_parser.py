@@ -337,8 +337,9 @@ class Orca_parser(object):
                         curr_id = i+2+j+4
                         # Iterate over AOs
                         for k, kline in enumerate(self.lines[curr_id:curr_id + nao]):
-                            row_coef = [float(l) for l in re.findall("[- ]\d*\.?\d+", kline)[2:]]
-#                            row_coef = [float(l) for l in kline.split()[2:]]
+#                            row_coef = [float(l) for l in re.findall("[- ]\d*\.?\d+", kline)[2:]]
+                            pre_coef = kline.split()[2:] # Exclude index and basis function name
+                            row_coef = [float(l) for l in re.findall("-?\d+\.?\d+m?", " ".join(pre_coef))]
                             self.C_mo[col_idx, k] = row_coef #MOs are rows
                 break
         self.moenergies = np.array(self.moenergies)

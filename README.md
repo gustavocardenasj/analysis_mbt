@@ -16,7 +16,7 @@ Analysis of molecular coordinates, atomic and molecular orbitals, molecular ener
 
 Rotation (and alignment) of molecular structures AND molecular orbitals
 
-Writing (Gaussian) Cube files containing MO or ESP volumetric data
+Writing (Gaussian) Cube files containing MO or electron density volumetric data
 
 ...
 

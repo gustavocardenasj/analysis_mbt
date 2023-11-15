@@ -32,9 +32,11 @@ SciPy
 
 Download the repository files, then update the following environment variables:
 
+```
 export ANALYSIS_MBT=/path/to/repo/files
 export PYTHONPATH=$ANALYSIS_MBT:$PYTHONPATH
 export PATH=$ANALYSIS_MBT/scripts_mbt:$PATH
+```
 
 # Usage: As a toolkit
 Via the scripts present in the /scripts folder.

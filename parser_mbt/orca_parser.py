@@ -58,6 +58,7 @@ class Orca_parser(object):
 
         # Complementary parsers, in case a molden file is provided
         self.__cpl_parsers = {"CARTESIAN COORDINATES (A.U.)": self.parse_coords,
+                              "BASIS SET IN INPUT FORMAT": self.parse_shells,
                               "FINAL SINGLE POINT ENERGY": self.get_energies,
                               "General Settings:": self.parse_general}
 
@@ -121,19 +122,28 @@ class Orca_parser(object):
 #                    # Call corresponding parser
 #                    self.__parsers[key]()
         # Parse all info from output file
-        for key, val in self.__headers.items():
-            if(val and key in self.__parsers.keys()):
-                # Call corresponding parser
-                self.__parsers[key]()
+#        for key, val in self.__headers.items():
+#            if(val and key in self.__parsers.keys()):
+#                # Call corresponding parser
+#                self.__parsers[key]()
         # Then update wavefunction info from molden file
         if(self.wf != ""):
-            # Parsing wf data from molden file
+            # Parsing wf data from molden file.
+            # Also, define parser list accordingly
+            parser_list = self.__cpl_parsers.keys()
             molden_obj = Molden_parser(self.wf, self.charge, self.mult, self.order, self.basis)
             molden_obj.parse()
             self.update_wf(molden_obj)
+        else:
+            parser_list = self.__parsers.keys()
+        # Parse all info from output file
+        for key, val in self.__headers.items():
+            if(val and key in parser_list):
+                # Call corresponding parser
+                self.__parsers[key]()
 
     def update_wf(self, molden_obj):
-        """Update wavefunction info from molden file on self."""
+        """Update wavefunction info from molden file on self.wf"""
         wf_attributes = ["C_mo","moenergies","mooccnos","mospin", "D_ao"]
         for iattr in wf_attributes:
             if(hasattr(molden_obj, iattr)):
@@ -350,6 +360,31 @@ class Orca_parser(object):
         perm_id = permute_orbitals(self._bas,\
                 order = "orca", target = self.order, basis = self.basis)
         self.C_mo = self.C_mo[:,perm_id]
+        
+        # Update f and g orbitals in the case of spherical functions
+        if(self.basis == "spherical"):
+            print("\n-----Reading ORCA molden file-----")
+            print("     Updating MOs to adapt to Orca format\n")
+            self.get_orca_mo()
+    
+    def get_orca_mo(self):
+        """
+        Adapt MO coefficients to Orca convention in a spherical basis:
+
+        Coefficients with inverted sign:
+        F(+3), F(-3), G(+3), G(-3) G(+4), G(-4)
+        """
+
+        cnt_basis = 0
+        # Iterate over shells
+        for i, ibas in enumerate(self._bas):
+            # Iterate over basis functions. Assume PySCF ordering
+            amom       = ibas[1]
+            amom_shl = ang_mom_sp[amom]
+            for j in range(amom_shl):
+                if((amom in [3,4]) and (j == 0 or j == amom_shl - 1)):
+                    self.C_mo[:,cnt_basis] = -1 * self.C_mo[:,cnt_basis]
+                cnt_basis += 1
 
     def get_energies(self):
         """Parse SCF, post-SCF and excited state energies"""

@@ -17,6 +17,7 @@ from parser_mbt.fchk_parser import Fchk_parser
 from parser_mbt.hdf5_parser import HDF5_parser
 from parser_mbt.gamess_parser import Gamess_parser
 from parser_mbt.orca_parser import Orca_parser
+from parser_mbt.psi4_parser import Psi4_parser
 
 # Writers
 from writer_mbt.gamess_writer import *
@@ -34,7 +35,8 @@ FORMAT_PARSER = {"Molden Format": "molden",
                  "Number of atoms                            I": "fchk",
                  "CENTER_COORDINATES": "h5",
                  "GAMESS execution script": "gamess",
-                 "Directorship and core code : Frank Neese": "orca"}
+                 "Directorship and core code : Frank Neese": "orca",
+                 "Psi4: An Open-Source Ab Initio Electronic Structure Package": "psi4"}
 
 class Mol(object):
 
@@ -78,6 +80,8 @@ class Mol(object):
             self._parser = Gamess_parser(infile, charge, mult, order, basis)
         elif(self.format == "orca"):
             self._parser = Orca_parser(infile, charge, mult, order, basis, wf)
+        elif(self.format == "psi4"):
+            self._parser = Psi4_parser(infile, charge, mult, order, basis, wf)
         else:
             self._parser = None
 

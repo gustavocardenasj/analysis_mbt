@@ -6,11 +6,12 @@ This is a set of analysis tools for a selected number of molecular files contain
 Interconversion among wavefunction formats compatible with different quantum chemistry packages:
 - Gaussian fchk (r/w)
 - Molden files (r/w); Orca molden (r)
-- Orca output file (w) (To be used in conjunction with Orca molden for post-SCF properties)
+- Orca output file (r) (To be used in conjunction with Orca molden for post-SCF properties)
 - Molcas h5 (r/w)
 - Molcas InpOrb (w)
 - Gamess output files (r)
-- Games .dat files (r/w)
+- Games .dat files (w; cartesian only)
+- Psi4 output file (r) (To be used in conjunction with Psi4 molden for Wavefunction data)
 
 Analysis of molecular coordinates, atomic and molecular orbitals, molecular energies, transition energies, point charges, electrostatic potential...
 

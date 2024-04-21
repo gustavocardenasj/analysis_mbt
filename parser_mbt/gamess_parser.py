@@ -161,7 +161,17 @@ class Gamess_parser(object):
                 for j, jline in enumerate(self.lines[i:]):
                     if(len(jline) == 0): break
                     row = jline.split()
-                    self[prop[j]] = int(row[-1])
+                    # Assess whether argument is an integer
+                    try:
+                        self[prop[j]] = int(row[-1])
+                    except:
+                        print(row[-1] + " is not an integer and will be skipped")
+                if(not hasattr(self, "qmatom")):
+                    # This is not a QM/MM calculation. 
+                    # qmatom == natom
+                    self["qmatom"] = self.natom
+                    self["mmatom"] = 0 
+                    self["link"]   = 0
                 break
 
     def parse_coords(self):

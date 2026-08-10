@@ -28,6 +28,7 @@ class Orca_parser(object):
                                       "BASIS SET IN INPUT FORMAT": False,
                                       "MOLECULAR ORBITALS": False,
                                       "FINAL SINGLE POINT ENERGY": False,
+                                      "MULLIKEN ATOMIC CHARGES": False,
                                       "General Settings:": False
                                       })
         # Lines from file
@@ -54,6 +55,7 @@ class Orca_parser(object):
                           "BASIS SET IN INPUT FORMAT": self.parse_shells,
                           "MOLECULAR ORBITALS": self.get_mos,
                           "FINAL SINGLE POINT ENERGY": self.get_energies,
+                          "MULLIKEN ATOMIC CHARGES": self.parse_mullikenchg,
                           "General Settings:": self.parse_general}
 
         # Complementary parsers, in case a molden file is provided
@@ -65,6 +67,7 @@ class Orca_parser(object):
         # basic attributes
         self.atomcoords  = []
 #        self.atomweights = []
+        self.mullikenchg = []
         self.ghost       = [] # Ghost atoms
         self.freq        = []
         self.nmodes      = []
@@ -412,6 +415,18 @@ class Orca_parser(object):
         # Get MOs
         self.allocate_mo(unrestr)
         self.get_all_mo(unrestr)
+
+    def parse_mullikenchg(self):
+        """Get MUlliken atomic charges"""
+
+        mulliken_parser = "MULLIKEN ATOMIC CHARGES"
+        for i, iline in enumerate(self.lines):
+            if(mulliken_parser in iline):
+                for jline in self.lines[i+2:]:
+                    if("Sum of atomic charges" in jline): break
+                    row = jline.split()
+                    self.mullikenchg.append(float(row[-1]))
+                break
 
     def __getattribute__(self, name):
         return(object.__getattribute__(self, name))

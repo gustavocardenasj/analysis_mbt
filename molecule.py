@@ -35,7 +35,8 @@ FORMAT_PARSER = {"Molden Format": "molden",
                  "Number of atoms                            I": "fchk",
                  "CENTER_COORDINATES": "h5",
                  "GAMESS execution script": "gamess",
-                 "Directorship and core code : Frank Neese": "orca",
+#                 "Directorship and core code : Frank Neese": "orca",
+                 "Frank Neese": "orca", # 6.0.1
                  "Psi4: An Open-Source Ab Initio Electronic Structure Package": "psi4"}
 
 class Mol(object):

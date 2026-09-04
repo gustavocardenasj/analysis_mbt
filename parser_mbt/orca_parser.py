@@ -29,6 +29,9 @@ class Orca_parser(object):
                                       "MOLECULAR ORBITALS": False,
                                       "FINAL SINGLE POINT ENERGY": False,
                                       "MULLIKEN ATOMIC CHARGES": False,
+                                      "VIBRATIONAL FREQUENCIES": False,
+                                      "NORMAL MODES": False,
+                                      "IR SPECTRUM": False,
                                       "General Settings:": False
                                       })
         # Lines from file
@@ -56,12 +59,20 @@ class Orca_parser(object):
                           "MOLECULAR ORBITALS": self.get_mos,
                           "FINAL SINGLE POINT ENERGY": self.get_energies,
                           "MULLIKEN ATOMIC CHARGES": self.parse_mullikenchg,
+                          "VIBRATIONAL FREQUENCIES": self.parse_frequencies,
+                          "NORMAL MODES": self.parse_nmodes,
+                          "IR SPECTRUM": self.parse_ir_spectrum,
                           "General Settings:": self.parse_general}
 
         # Complementary parsers, in case a molden file is provided
-        self.__cpl_parsers = {"CARTESIAN COORDINATES (A.U.)": self.parse_coords,
-                              "BASIS SET IN INPUT FORMAT": self.parse_shells,
+        self.__cpl_parsers = {
+#                               "CARTESIAN COORDINATES (A.U.)": self.parse_coords,
+#                              "BASIS SET IN INPUT FORMAT": self.parse_shells,
                               "FINAL SINGLE POINT ENERGY": self.get_energies,
+                              "MULLIKEN ATOMIC CHARGES": self.parse_mullikenchg,
+                              "VIBRATIONAL FREQUENCIES": self.parse_frequencies,
+                              "NORMAL MODES": self.parse_nmodes,
+                              "IR SPECTRUM": self.parse_ir_spectrum,
                               "General Settings:": self.parse_general}
 
         # basic attributes
@@ -147,7 +158,18 @@ class Orca_parser(object):
 
     def update_wf(self, molden_obj):
         """Update wavefunction info from molden file on self.wf"""
-        wf_attributes = ["C_mo","moenergies","mooccnos","mospin", "D_ao"]
+        # Inherit attributes from the molden file
+        wf_attributes = ["atomnos", 
+                         "natoms", 
+                         "atomcoords", 
+                         "_bas", 
+                         "_atm", 
+                         "_env", 
+                         "C_mo",
+                         "moenergies",
+                         "mooccnos",
+                         "mospin", 
+                         "D_ao"]
         for iattr in wf_attributes:
             if(hasattr(molden_obj, iattr)):
                 self[iattr] = deepcopy(molden_obj[iattr])
@@ -183,7 +205,14 @@ class Orca_parser(object):
         """
         Parse general info about the molecule.
         Read directly A.U. entry, which also contains information
-        regarding atomic numbers, weights, fragments and ghost atoms."""
+        regarding atomic numbers, weights, fragments and ghost atoms.
+        """
+
+        # Re-initialize attributes eventually initiallized
+        self._atm = []
+        self._env = [0.0 for i in range(0,20)]
+        self.atomcoords = []
+
         for cnt1, iline in enumerate(self.lines):
 #            if("CARTESIAN COORDINATES (ANGSTROEM)" in iline):
 #                for atid, jline in enumerate(self.lines[cnt1 + 2:]):
@@ -428,6 +457,70 @@ class Orca_parser(object):
                     self.mullikenchg.append(float(row[-1]))
                 break
 
+    def parse_frequencies(self):
+        """Parse frequencies in cm-1"""
+        freq_parser = "VIBRATIONAL FREQUENCIES"
+        for cnt1, iline in enumerate(self.lines):
+            if(freq_parser in iline):
+                for cnt2, jline in enumerate(self.lines[cnt1+5:]):
+                    if(len(jline) == 0):
+                        break
+                    jrow = jline.split()
+                    self.freq.append(float(jrow[1]))
+                break
+    
+    def parse_ir_spectrum(self):
+        """
+        Parse IR intensities. 
+
+        Warning: A 3N long vector is defined, with the first 6 
+        entries set to 0, so as to match it with the self.freq array
+        """
+        ir_parser = "IR SPECTRUM"
+        offset    = 6
+        ir_intens = [0.0 for i in range(6)]
+        for cnt1, iline in enumerate(self.lines):
+            if(ir_parser in iline):
+                for cnt2, jline in enumerate(self.lines[cnt1+offset:]):
+                    if(len(jline) == 0): break
+                    jrow = jline.split()
+                    ir_intens.append(float(jrow[3]))
+                break
+        self.ir_intens = np.array(ir_intens)
+
+    def parse_nmodes(self):
+        """
+        Parse normal modes. Returns a (3N,N,3) array
+        (including translational and rotational modes)
+        """
+        nmodes_parser = "NORMAL MODES"
+        offset        = 8
+        offset_nmode  = 3*self.natoms
+        print("Natoms = ", self.natoms)
+        nmodes        = np.empty((offset_nmode, 0)) # Concat horizontally
+        counter       = 0
+        for cnt1, iline in enumerate(self.lines):
+            if(nmodes_parser in iline):
+                ibuff = [] 
+                for cnt2, jline in enumerate(self.lines[cnt1+offset:]):
+                    if(len(jline) == 0): 
+                        # Concatenate last buffer, then exit
+                        nmodes = np.concatenate((nmodes, ibuff), axis = 1)
+                        break
+                    jrow = jline.split()
+                    if(jrow[1].isdigit()):
+                        # Accumulate buffer
+                        nmodes = np.concatenate((nmodes, ibuff), axis = 1)
+                        ibuff = []
+                        continue
+                    ibuff.append([float(k) for k in jrow[1:]])
+                break
+
+        # Transpose so that the rows are the normal modes,
+        # then reshape
+        self.nmodes = nmodes.T.reshape((offset_nmode,self.natoms,3))
+
+
     def __getattribute__(self, name):
         return(object.__getattribute__(self, name))
 
@@ -439,17 +532,4 @@ class Orca_parser(object):
 
     def __getitem__(self, name):
         return(object.__getattribute__(self, name))
-
-
-
-
-
-
-
-
-
-
-
-                
-
 

@@ -40,12 +40,21 @@ class Write_molden(object):
                   \nA pointer will be used instead. However,\
                   \nchanges will occur in place!')
             self.mol = mol
-        self.headers = OrderedDict({"Atoms": \
-                "atomcoords", "GTO": "_bas", \
-                "MO": "C_mo"})
+        self.headers = OrderedDict({"Atoms": "atomcoords", 
+                                    "GTO": "_bas", 
+                                    "MO": "C_mo",
+                                    "FREQ": "freq",
+                                    "FR-COORD": "atomcoords",
+                                    "FR-NORM-COORD": "nmodes",
+                                    "INT": "ir_intens"
+                                    })
         self.writers = {"GTO": self.write_gto, 
                         "Atoms": self.write_coords,
-                        "MO": self.write_mo}
+                        "MO": self.write_mo,
+                        "FREQ": self.write_freq,
+                        "FR-COORD": self.write_coords_freq,
+                        "FR-NORM-COORD": self.write_nmodes,
+                        "INT": self.write_ir_spectrum}
 
         # Update AO ordering in self.mol to molden
         self.mol.update_order(target = "molden")
@@ -141,5 +150,56 @@ class Write_molden(object):
             for cn1, iao in enumerate(imo):
 #                f.write("{:>4d}{:>11.6f}\n".format(cn1 + 1, iao))
                 # Molcas-generated molden file 
-                f.write("{:>4d}{:>19.8f}\n".format(cn1 + 1, iao)) 
+                f.write("{:>4d}{:>19.12f}\n".format(cn1 + 1, iao)) 
+
+    def write_freq(self, f):
+        """
+        Write vibrational frequencies, if present.
+        """
+        if(len(self.mol.freq) == 0):
+            return
+        f.write("[FREQ]\n")
+        for cnt, ifreq in enumerate(self.mol.freq):
+            f.write("  {:>18.10e}\n".format(ifreq))
+
+    def write_coords_freq(self,f):
+        """Write coordinates for normal modes.
+           units: Bohr
+        """
+        if(len(self.mol.freq) == 0):
+            return
+        f.write("[FR-COORD]\n")
+        atom_list  = [iat for iat in self.mol._atm[:,0]]
+        names      = [atom_names[iat] for iat in atom_list]
+
+        fmt = "{:<4s}{:>18.10e}{:>18.10e}{:>18.10e}\n"
+
+        for cnt, icrd in enumerate(self.mol.atomcoords):
+            iname = names[cnt]
+            inum  = atom_list[cnt]
+            f.write(fmt.format(iname, *icrd))
+
+    def write_nmodes(self, f):
+        """
+        Write normal modes of vibration, if present
+        """
+        if(len(self.mol.nmodes) == 0):
+            return
+        f.write("[FR-NORM-COORD]\n")
+        fmt = "{:>18.10e}{:>18.10e}{:>18.10e}\n"
+        for icnt, imode in enumerate(self.mol.nmodes):
+            f.write("vibration {}\n".format(icnt+1))
+            for jcnt, jatom in enumerate(imode):
+                f.write(fmt.format(*jatom))
+    
+    def write_ir_spectrum(self, f):
+        """
+        Write IR intensities
+        """
+        if(len(self.mol.ir_intens) == 0):
+            return
+        f.write("[INT]\n")
+        fmt = "{:>18.10e}\n"
+        for cnt, iint in enumerate(self.mol.ir_intens):
+            f.write("{:>18.10e}\n".format(iint))
 

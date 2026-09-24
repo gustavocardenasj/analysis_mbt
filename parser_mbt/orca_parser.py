@@ -32,6 +32,7 @@ class Orca_parser(object):
                                       "VIBRATIONAL FREQUENCIES": False,
                                       "NORMAL MODES": False,
                                       "IR SPECTRUM": False,
+                                      "Final Gibbs free energy": False,
                                       "General Settings:": False
                                       })
         # Lines from file
@@ -62,6 +63,7 @@ class Orca_parser(object):
                           "VIBRATIONAL FREQUENCIES": self.parse_frequencies,
                           "NORMAL MODES": self.parse_nmodes,
                           "IR SPECTRUM": self.parse_ir_spectrum,
+                          "Final Gibbs free energy": self.parse_thermochemistry,
                           "General Settings:": self.parse_general}
 
         # Complementary parsers, in case a molden file is provided
@@ -73,6 +75,7 @@ class Orca_parser(object):
                               "VIBRATIONAL FREQUENCIES": self.parse_frequencies,
                               "NORMAL MODES": self.parse_nmodes,
                               "IR SPECTRUM": self.parse_ir_spectrum,
+                              "Final Gibbs free energy": self.parse_thermochemistry,
                               "General Settings:": self.parse_general}
 
         # basic attributes
@@ -454,7 +457,10 @@ class Orca_parser(object):
                 for jline in self.lines[i+2:]:
                     if("Sum of atomic charges" in jline): break
                     row = jline.split()
-                    self.mullikenchg.append(float(row[-1]))
+                    if("SPIN POPULATIONS" in iline):
+                        self.mullikenchg.append(float(row[-2]))
+                    else:
+                        self.mullikenchg.append(float(row[-1]))
                 break
 
     def parse_frequencies(self):
@@ -520,7 +526,49 @@ class Orca_parser(object):
         # then reshape
         self.nmodes = nmodes.T.reshape((offset_nmode,self.natoms,3))
 
+    def parse_thermochemistry(self):
+        """
+        Read thermochemical properties from the orca output file
+        of a frequency calculation.
+        """
+        # Internal energy
+        self.e_ele = 0.
+        self.e_zpe = 0.
+        self.e_thr = 0. # translational, vibrational and rotational
+        
+        # Enthalpy
+        self.e_cpv = 0. # Enthalpic correction
+        self.e_hnt = 0.
 
+        # Entropy
+        self.e_ent = 0.
+
+        # E Gibbs
+        self.e_gib = 0.
+
+        # Gibbs correction (to eventually refine the electronic energy)
+        self.e_gcr = 0.
+        
+        for i, iline in enumerate(self.lines):
+            row = iline.split()
+
+            if("Electronic energy" in iline):
+                self.e_ele = float(row[3])
+            if("Zero point energy" in iline):
+                self.e_zpe = float(row[4])
+            if("Total thermal correction" in iline):
+                self.e_thr = float(row[3])
+#            if("Thermal Enthalpy correction" in iline):
+#                e_cpv = float(row[4])
+            if("Total Enthalpy" in iline):
+                self.e_hnt = float(row[3])
+            if("Final entropy term" in iline):
+                self.e_ent = float(row[4])
+            if("Final Gibbs free energy" in iline):
+                self.e_gib = float(row[5])
+            if("G-E(el)" in iline):
+                self.e_gcr = float(row[2])
+    
     def __getattribute__(self, name):
         return(object.__getattribute__(self, name))
 
